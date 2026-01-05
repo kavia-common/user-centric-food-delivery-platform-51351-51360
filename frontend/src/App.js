@@ -16,6 +16,7 @@ import { RestaurantMenuPage } from "./pages/RestaurantMenuPage";
 import { CheckoutPage } from "./pages/CheckoutPage";
 import { OrdersPage } from "./pages/OrdersPage";
 import { OrderTrackingPage } from "./pages/OrderTrackingPage";
+import { CartPage } from "./pages/CartPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 
 function useQuerySync(setQuery) {
@@ -91,6 +92,7 @@ function AppFrame({ navProps, isCartOpen, onCloseCart, query, setQuery }) {
   const mainAria = useMemo(() => {
     if (location.pathname.startsWith("/restaurants/")) return "Restaurant menu";
     if (location.pathname === "/checkout") return "Checkout";
+    if (location.pathname === "/cart") return "Cart";
     if (location.pathname.startsWith("/orders/")) return "Order tracking";
     if (location.pathname === "/orders") return "Orders";
     return "Restaurants";
@@ -106,6 +108,7 @@ function AppFrame({ navProps, isCartOpen, onCloseCart, query, setQuery }) {
           <Routes>
             <Route path="/" element={<RestaurantsPage query={query} />} />
             <Route path="/restaurants/:restaurantId" element={<RestaurantMenuPage />} />
+            <Route path="/cart" element={<CartPage onOpenCart={() => onCloseCart?.()} />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/orders/:orderId" element={<OrderTrackingPage />} />

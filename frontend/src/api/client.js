@@ -5,7 +5,11 @@
 
 import { mockApi } from "./mockApi";
 
-const API_BASE = (process.env.REACT_APP_API_BASE || "").trim();
+/**
+ * Prefer REACT_APP_API_BASE (requested), fall back to REACT_APP_BACKEND_URL if provided.
+ * If neither is set, the app runs in mock mode.
+ */
+const API_BASE = (process.env.REACT_APP_API_BASE || process.env.REACT_APP_BACKEND_URL || "").trim();
 
 /**
  * PUBLIC_INTERFACE

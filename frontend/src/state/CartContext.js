@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useReducer } from "react";
 
-const STORAGE_KEY = "fd.cart.v1";
+const STORAGE_KEY = "fd.cart.v2";
 
 function safeParse(json, fallback) {
   try {
@@ -24,10 +24,27 @@ function calcTotals(items) {
 
 const CartContext = createContext(null);
 
+const initialState = {
+  restaurantId: null,
+  restaurantName: null,
+  items: [],
+  promoCode: "",
+};
+
+function normalizeHydrated(payload) {
+  if (!payload || typeof payload !== "object") return null;
+  return {
+    restaurantId: payload.restaurantId ?? null,
+    restaurantName: payload.restaurantName ?? null,
+    items: Array.isArray(payload.items) ? payload.items : [],
+    promoCode: typeof payload.promoCode === "string" ? payload.promoCode : "",
+  };
+}
+
 function reducer(state, action) {
   switch (action.type) {
     case "HYDRATE": {
-      return action.payload || state;
+      return normalizeHydrated(action.payload) || state;
     }
     case "ADD_ITEM": {
       const { restaurantId, restaurantName, item } = action.payload;
@@ -38,6 +55,8 @@ function reducer(state, action) {
           restaurantId,
           restaurantName,
           items: [{ ...item, qty: 1 }],
+          // Clear promo when switching restaurants to avoid accidental carry-over
+          promoCode: "",
         };
       }
 
@@ -54,16 +73,22 @@ function reducer(state, action) {
         .map((x) => (x.id === itemId ? { ...x, qty: Math.max(0, qty) } : x))
         .filter((x) => x.qty > 0);
       const cleared = items.length === 0;
-      return cleared ? { restaurantId: null, restaurantName: null, items: [] } : { ...state, items };
+      return cleared ? { ...initialState } : { ...state, items };
     }
     case "REMOVE_ITEM": {
       const { itemId } = action.payload;
       const items = state.items.filter((x) => x.id !== itemId);
       const cleared = items.length === 0;
-      return cleared ? { restaurantId: null, restaurantName: null, items: [] } : { ...state, items };
+      return cleared ? { ...initialState } : { ...state, items };
+    }
+    case "SET_PROMO": {
+      return { ...state, promoCode: action.payload || "" };
+    }
+    case "CLEAR_PROMO": {
+      return { ...state, promoCode: "" };
     }
     case "CLEAR": {
-      return { restaurantId: null, restaurantName: null, items: [] };
+      return { ...initialState };
     }
     default:
       return state;
@@ -76,7 +101,7 @@ function reducer(state, action) {
  */
 export function CartProvider({ children }) {
   /** This is a public function. */
-  const [state, dispatch] = useReducer(reducer, { restaurantId: null, restaurantName: null, items: [] });
+  const [state, dispatch] = useReducer(reducer, initialState);
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -97,13 +122,28 @@ export function CartProvider({ children }) {
       cart: state,
       totals,
       itemCount,
+      promoCode: state.promoCode,
+
+      // PUBLIC_INTERFACE
       addItem: (restaurant, item) =>
         dispatch({
           type: "ADD_ITEM",
           payload: { restaurantId: restaurant.id, restaurantName: restaurant.name, item },
         }),
+
+      // PUBLIC_INTERFACE
       setQty: (itemId, qty) => dispatch({ type: "SET_QTY", payload: { itemId, qty } }),
+
+      // PUBLIC_INTERFACE
       removeItem: (itemId) => dispatch({ type: "REMOVE_ITEM", payload: { itemId } }),
+
+      // PUBLIC_INTERFACE
+      setPromoCode: (code) => dispatch({ type: "SET_PROMO", payload: code }),
+
+      // PUBLIC_INTERFACE
+      clearPromoCode: () => dispatch({ type: "CLEAR_PROMO" }),
+
+      // PUBLIC_INTERFACE
       clear: () => dispatch({ type: "CLEAR" }),
     }),
     [state, totals, itemCount]
